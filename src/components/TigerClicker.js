@@ -11,10 +11,17 @@ const TigerClicker = () => {
   const [effects, setEffects] = useState([]);
   const [isPetting, setIsPetting] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [gameActive, setGameActive] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   
   const pettingIntervalRef = useRef(null);
   const lastPetTimeRef = useRef(0);
   const mousePositionRef = useRef({ x: 0, y: 0 });
+  const timerRef = useRef(null);
 
   const createSparkles = useCallback((x, y) => {
     const newSparkles = [];
@@ -59,7 +66,11 @@ const TigerClicker = () => {
   const handleScore = useCallback((x, y, clickedElement) => {
     if (!hasInteracted) {
       setHasInteracted(true);
+      setGameActive(true);
     }
+    
+    // Don't score if game is not active
+    if (!gameActive && hasInteracted) return;
     
     let points = 1;
     let isBonus = false;
@@ -95,7 +106,7 @@ const TigerClicker = () => {
     setTimeout(() => {
       setIsClicked(false);
     }, 150);
-  }, [createSparkles, createClickEffect, hasInteracted]);
+  }, [createSparkles, createClickEffect, hasInteracted, gameActive]);
 
   const handleCatClick = useCallback((e) => {
     if (isClicked) return;
@@ -109,7 +120,10 @@ const TigerClicker = () => {
   const handleMouseDown = useCallback((e) => {
     if (!hasInteracted) {
       setHasInteracted(true);
+      setGameActive(true);
     }
+    
+    if (!gameActive && hasInteracted) return;
     
     setIsPetting(true);
     lastPetTimeRef.current = Date.now();
@@ -122,7 +136,7 @@ const TigerClicker = () => {
         lastPetTimeRef.current = now;
       }
     }, 100);
-  }, [handleScore, hasInteracted]);
+  }, [handleScore, hasInteracted, gameActive]);
 
   const handleMouseMove = useCallback((e) => {
     if (isPetting) {
@@ -153,10 +167,76 @@ const TigerClicker = () => {
     }
   }, [isPetting]);
 
+  //timer
+  React.useEffect(() => {
+    if (gameActive && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            setGameActive(false);
+            setShowNameInput(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [gameActive, timeLeft]);
+
+  // name submission
+  const handleNameSubmit = useCallback(() => {
+    if (playerName.trim()) {
+      const newEntry = {
+        name: playerName.trim(),
+        score: score,
+        date: new Date().toLocaleDateString()
+      };
+      
+      setLeaderboard(prev => {
+        const updated = [...prev, newEntry].sort((a, b) => b.score - a.score).slice(0, 10);
+        return updated;
+      });
+    }
+    
+    setShowNameInput(false);
+    setShowLeaderboard(true);
+  }, [playerName, score]);
+
+  const handleCancel = useCallback(() => {
+    setShowNameInput(false);
+    setTimeLeft(60);
+    setScore(0);
+    setGameActive(false);
+    setHasInteracted(false);
+  }, []);
+
+  // new game
+  const startNewGame = useCallback(() => {
+    setShowLeaderboard(false);
+    setTimeLeft(60);
+    setScore(0);
+    setGameActive(false);
+    setHasInteracted(false);
+    setPlayerName('');
+  }, []);
+
   React.useEffect(() => {
     return () => {
       if (pettingIntervalRef.current) {
         clearInterval(pettingIntervalRef.current);
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
     };
   }, []);
@@ -188,11 +268,22 @@ const TigerClicker = () => {
 
   return (
     <div className="game-container">
-      <div className="title">The Tiger</div>
+      <div className="title">Jinu's Tiger</div>
       
       <div className="score-counter">
         Pats: <span className="score">{score}</span>
       </div>
+
+      <div className="timer">
+        Time: <span className="time">{timeLeft}s</span>
+      </div>
+      
+      <button 
+        className="leaderboard-btn"
+        onClick={() => setShowLeaderboard(true)}
+      >
+        🏆
+      </button>
 
       <div 
         className={`cat-container ${isClicked ? 'clicked' : ''} ${isPetting ? 'petting' : ''}`}
@@ -230,7 +321,6 @@ const TigerClicker = () => {
         <p>made by @tech.kei</p>
       </footer>
 
-      {/* Render effects */}
       {effects.map(effect => (
         effect.type === 'click' ? (
           <div
@@ -253,6 +343,69 @@ const TigerClicker = () => {
             }}/>
         )
       ))}
+
+      {/* leaderboard popup */}
+      {showNameInput && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>🎉 Time's Up!</h2>
+            <p>🐅 You scored <strong>{score} pats</strong>!</p>
+            <p>Enter your name for the leaderboard:</p>
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Your name"
+              maxLength={20}
+              onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
+              autoFocus
+            />
+            <div className="modal-buttons">
+              <button onClick={handleNameSubmit} className="submit-btn">
+                🏆 Submit Score
+              </button>
+              <button onClick={handleCancel} className="cancel-btn">
+                🔄 Continue Playing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaderboard && (
+        <div className="modal-overlay" onClick={() => setShowLeaderboard(false)}>
+          <div className="modal leaderboard-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>🏆 Leaderboard</h2>
+            <div className="leaderboard-list">
+              {leaderboard.length === 0 ? (
+                <div className="leaderboard-empty">
+                  <p>No scores yet!</p>
+                  <p>Be the first to play and set a record! 🐅</p>
+                </div>
+              ) : (
+                leaderboard.map((entry, index) => (
+                  <div key={index} className={`leaderboard-entry ${index < 3 ? 'top-three' : ''}`}>
+                    <span className="rank">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    </span>
+                    <span className="name">{entry.name}</span>
+                    <span className="score">{entry.score} pats</span>
+                    <span className="date">{entry.date}</span>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="modal-buttons">
+              <button onClick={startNewGame} className="new-game-btn">
+                🐯 New Game
+              </button>
+              <button onClick={() => setShowLeaderboard(false)} className="close-btn">
+                ✕ Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
