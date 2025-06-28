@@ -16,7 +16,7 @@ const TigerClicker = () => {
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState('');
   const [leaderboard, setLeaderboard] = useState([]);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false); 
   
   const pettingIntervalRef = useRef(null);
   const lastPetTimeRef = useRef(0);
@@ -69,7 +69,7 @@ const TigerClicker = () => {
       setGameActive(true);
     }
     
-    // Don't score if game is not active
+    // don't score if game is not active
     if (!gameActive && hasInteracted) return;
     
     let points = 1;
@@ -348,9 +348,9 @@ const TigerClicker = () => {
       {showNameInput && (
         <div className="modal-overlay">
           <div className="modal">
-            <h2>🎉 Time's Up!</h2>
-            <p>🐅 You scored <strong>{score} pats</strong>!</p>
-            <p>Enter your name for the leaderboard:</p>
+            <h2>🎉 time's up!</h2>
+            <p>you scored <strong>{score} pats</strong>!</p>
+            <p>enter your name for the leaderboard:</p>
             <input
               type="text"
               value={playerName}
