@@ -362,7 +362,7 @@ const TigerClicker = () => {
             />
             <div className="modal-buttons">
               <button onClick={handleNameSubmit} className="submit-btn">
-                submit score 🏆 
+                submit score 🏆
               </button>
               <button onClick={handleCancel} className="cancel-btn">
                 🔄 continue playing
@@ -375,7 +375,7 @@ const TigerClicker = () => {
       {showLeaderboard && (
         <div className="modal-overlay" onClick={() => setShowLeaderboard(false)}>
           <div className="modal leaderboard-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>leaderboard 🏆</h2>
+            <h2>LEADERBOARD 🏆</h2>
             <div className="leaderboard-list">
               {leaderboard.length === 0 ? (
                 <div className="leaderboard-empty">
