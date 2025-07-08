@@ -27,8 +27,6 @@ const TigerClicker = () => {
   const timerRef = useRef(null);
 
   // firebase
-  console.log('Firestore db object:', db);
-
   useEffect(() => {
     console.log('Leaderboard listener mounted');
     let isMounted = true;
@@ -58,7 +56,6 @@ const TigerClicker = () => {
     };
   }, []);
   
-
   const createSparkles = useCallback((x, y) => {
     const newSparkles = [];
     for (let i = 0; i < 8; i++) {
