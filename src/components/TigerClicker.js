@@ -244,7 +244,7 @@ const TigerClicker = () => {
         const localScores = JSON.parse(localStorage.getItem('tigerClickerLeaderboard') || '[]');
         const updatedScores = [...localScores, { ...newEntry, date: newEntry.date.toLocaleDateString() }]
           .sort((a, b) => b.score - a.score)
-          .slice(0, 10);
+          .slice(0, 20);
         localStorage.setItem('tigerClickerLeaderboard', JSON.stringify(updatedScores));
         setLeaderboard(updatedScores);
       } finally {
