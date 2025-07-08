@@ -478,7 +478,26 @@
     
     .instructions {
       font-size: 16px;
-      bottom: 20px;
+      bottom: 600px;
+      top: 150px;
+
+    }
+
+    .leaderboard-btn {
+        bottom: 140px;
+        right: 30px;
+        padding: 12px;
+        border-radius: 100%;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        z-index: 100;
+    }
+
+    .footer {
+      font-size: 12px;
+      bottom: 10px;
+      right: 10px;
     }
 
     .bird-image {
