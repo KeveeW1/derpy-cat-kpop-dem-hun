@@ -1,5 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './TigerClicker.css';
+import { collection, addDoc, getDocs, orderBy, limit, query, onSnapshot } from 'firebase/firestore';
+import { db } from './firebase';
 
 import catIdleImage from '../assets/images/derpy.png';
 import catClickedImage from '../assets/images/derpyAhh.png';
@@ -17,11 +19,53 @@ const TigerClicker = () => {
   const [playerName, setPlayerName] = useState('');
   const [leaderboard, setLeaderboard] = useState([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false); 
+  const [loading, setLoading] = useState(false);
   
   const pettingIntervalRef = useRef(null);
   const lastPetTimeRef = useRef(0);
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const timerRef = useRef(null);
+
+  // firebase
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      try {
+        const q = query(
+          collection(db, 'leaderboard'), 
+          orderBy('score', 'desc'), 
+          limit(10)
+        );
+        const querySnapshot = await getDocs(q);
+        const scores = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          date: doc.data().date ? new Date(doc.data().date.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString()
+        }));
+        setLeaderboard(scores);
+      } catch (error) {
+        console.log('Error loading leaderboard:', error);
+        const localScores = localStorage.getItem('tigerClickerLeaderboard');
+        if (localScores) {
+          setLeaderboard(JSON.parse(localScores));
+        }
+      }
+    };
+
+    loadLeaderboard();
+
+    // real-time updates on the leaderboard
+    const q = query(collection(db, 'leaderboard'), orderBy('score', 'desc'), limit(10));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const scores = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date ? new Date(doc.data().date.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString()
+      }));
+      setLeaderboard(scores);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const createSparkles = useCallback((x, y) => {
     const newSparkles = [];
@@ -193,19 +237,32 @@ const TigerClicker = () => {
     };
   }, [gameActive, timeLeft]);
 
-  // name submission
-  const handleNameSubmit = useCallback(() => {
+  // name submission - NOW SAVES TO FIREBASE
+  const handleNameSubmit = useCallback(async () => {
     if (playerName.trim()) {
+      setLoading(true);
       const newEntry = {
         name: playerName.trim(),
         score: score,
-        date: new Date().toLocaleDateString()
+        date: new Date()
       };
       
-      setLeaderboard(prev => {
-        const updated = [...prev, newEntry].sort((a, b) => b.score - a.score).slice(0, 10);
-        return updated;
-      });
+      try {
+        // Save to Firebase
+        await addDoc(collection(db, 'leaderboard'), newEntry);
+        console.log('Score saved to Firebase!');
+      } catch (error) {
+        console.log('Error saving to Firebase:', error);
+        // Fallback to local storage
+        const localScores = JSON.parse(localStorage.getItem('tigerClickerLeaderboard') || '[]');
+        const updatedScores = [...localScores, { ...newEntry, date: newEntry.date.toLocaleDateString() }]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10);
+        localStorage.setItem('tigerClickerLeaderboard', JSON.stringify(updatedScores));
+        setLeaderboard(updatedScores);
+      }
+      
+      setLoading(false);
     }
     
     setShowNameInput(false);
@@ -359,12 +416,13 @@ const TigerClicker = () => {
               maxLength={20}
               onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
               autoFocus
+              disabled={loading}
             />
             <div className="modal-buttons">
-              <button onClick={handleNameSubmit} className="submit-btn">
-                submit score 🏆
+              <button onClick={handleNameSubmit} className="submit-btn" disabled={loading}>
+                {loading ? 'Saving...' : 'submit score 🏆'}
               </button>
-              <button onClick={handleCancel} className="cancel-btn">
+              <button onClick={handleCancel} className="cancel-btn" disabled={loading}>
                 🔄 continue playing
               </button>
             </div>
@@ -379,12 +437,12 @@ const TigerClicker = () => {
             <div className="leaderboard-list">
               {leaderboard.length === 0 ? (
                 <div className="leaderboard-empty">
-                  <p>No scores yet!</p>
+                  <p>Loading scores...</p>
                   <p>Be the first to play and set a record! 🐅</p>
                 </div>
               ) : (
                 leaderboard.map((entry, index) => (
-                  <div key={index} className={`leaderboard-entry ${index < 3 ? 'top-three' : ''}`}>
+                  <div key={entry.id || index} className={`leaderboard-entry ${index < 3 ? 'top-three' : ''}`}>
                     <span className="rank">
                       {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                     </span>
