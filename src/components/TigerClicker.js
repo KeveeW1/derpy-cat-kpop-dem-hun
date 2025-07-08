@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './TigerClicker.css';
-import { collection, addDoc, getDocs, orderBy, limit, query, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, orderBy, limit, query, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
 import catIdleImage from '../assets/images/derpy.png';
@@ -28,7 +28,7 @@ const TigerClicker = () => {
 
   // firebase
   console.log('Firestore db object:', db);
-  
+
   useEffect(() => {
     console.log('Leaderboard listener mounted');
     let isMounted = true;
