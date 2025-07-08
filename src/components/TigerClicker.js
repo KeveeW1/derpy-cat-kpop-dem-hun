@@ -28,34 +28,19 @@ const TigerClicker = () => {
 
   // firebase
   useEffect(() => {
-    const loadLeaderboard = async () => {
-      try {
-        const q = query(
-          collection(db, 'leaderboard'), 
-          orderBy('score', 'desc'), 
-          limit(10)
-        );
-        const querySnapshot = await getDocs(q);
-        const scores = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          date: doc.data().date ? new Date(doc.data().date.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString()
-        }));
-        setLeaderboard(scores);
-      } catch (error) {
-        console.log('Error loading leaderboard:', error);
-        const localScores = localStorage.getItem('tigerClickerLeaderboard');
-        if (localScores) {
-          setLeaderboard(JSON.parse(localScores));
-        }
-      }
-    };
-
-    loadLeaderboard();
-
-    // real-time updates on the leaderboard
-    const q = query(collection(db, 'leaderboard'), orderBy('score', 'desc'), limit(10));
+    console.log('Leaderboard listener mounted');
+    let isMounted = true;
+  
+    const q = query(
+      collection(db, 'leaderboard'),
+      orderBy('score', 'desc'),
+      limit(10)
+    );
+  
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!isMounted) return;  // avoid state update after unmount
+      console.log('Leaderboard snapshot update received');
+  
       const scores = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -63,9 +48,14 @@ const TigerClicker = () => {
       }));
       setLeaderboard(scores);
     });
-
-    return () => unsubscribe();
+  
+    return () => {
+      console.log('Leaderboard listener unsubscribed');
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
+  
 
   const createSparkles = useCallback((x, y) => {
     const newSparkles = [];
