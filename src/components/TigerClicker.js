@@ -27,6 +27,8 @@ const TigerClicker = () => {
   const timerRef = useRef(null);
 
   // firebase
+  console.log('Firestore db object:', db);
+  
   useEffect(() => {
     console.log('Leaderboard listener mounted');
     let isMounted = true;
@@ -236,27 +238,24 @@ const TigerClicker = () => {
         score: score,
         date: new Date()
       };
-      
+  
       try {
-        // Save to Firebase
         await addDoc(collection(db, 'leaderboard'), newEntry);
         console.log('Score saved to Firebase!');
       } catch (error) {
-        console.log('Error saving to Firebase:', error);
-        // Fallback to local storage
+        console.error('Error saving to Firebase:', error);
         const localScores = JSON.parse(localStorage.getItem('tigerClickerLeaderboard') || '[]');
         const updatedScores = [...localScores, { ...newEntry, date: newEntry.date.toLocaleDateString() }]
           .sort((a, b) => b.score - a.score)
           .slice(0, 10);
         localStorage.setItem('tigerClickerLeaderboard', JSON.stringify(updatedScores));
         setLeaderboard(updatedScores);
+      } finally {
+        setLoading(false);    // always stop loading no matter what
+        setShowNameInput(false);
+        setShowLeaderboard(true);
       }
-      
-      setLoading(false);
     }
-    
-    setShowNameInput(false);
-    setShowLeaderboard(true);
   }, [playerName, score]);
 
   const handleCancel = useCallback(() => {
